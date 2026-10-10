@@ -64,6 +64,12 @@ details[open] summary::after{content:"–"}
 .st.ok{color:var(--accent)}.st.rev{color:var(--warn)}
 .ch{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);padding:6px 16px 2px}
 [data-theme=brutal] .ch{color:#111;font-weight:700}
+.lvl{font-weight:600;font-size:15px;margin-top:6px}
+.steps{margin:0 0 12px;padding:0;list-style:none;counter-reset:st}
+.steps li{counter-increment:st;display:flex;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid var(--line);font-size:15px}
+.steps li:first-child{border-top:0}
+.steps li::before{content:counter(st);flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+[data-theme=brutal] .steps li::before{color:#111;border:2px solid #111;border-radius:0}
 .note{color:var(--muted);font-size:13px;padding:0 16px 14px}
 h2{font-size:22px;margin:4px 0 16px;font-weight:600}
 .day{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
@@ -432,9 +438,34 @@ function renderNumbers(){
    <div class="card"><div class="label">Study days · ${studied} of last 14</div>
     <div class="bars">${days.map(n=>`<div class="${n?"on":""}" style="height:${n?Math.max(18,n/max*100):9}%"></div>`).join("")}</div>
     <div class="blabels"><span>2 weeks ago</span><span>Today</span></div></div>
-   <div class="card"><div class="label">Revise these</div>${rev.length?`<div class="lines" style="padding:0">${rev.map(t=>`<button class="topic" data-topic="${esc(t[0])}"><span>${esc(t[0])}</span><span class="st rev">Log</span></button>`).join("")}</div>`:'<div class="sub" style="margin:0">Nothing weak yet.</div>'}</div>`;
+   <div class="card"><div class="label">Revise these</div>${rev.length?`<div class="lines" style="padding:0">${rev.map(t=>`<button class="topic" data-improve="${esc(t[0])}"><span>${esc(t[0])}</span><span class="st rev">Fix it</span></button>`).join("")}</div>`:'<div class="sub" style="margin:0">Nothing weak yet.</div>'}</div>`;
 }
 function renderAll(){applyLook();renderToday();renderHistory();renderNumbers()}
+
+
+/* ---------- How to improve ---------- */
+const STEPS={"essay": {"low": ["Read 2 model essays on this theme. Note the structure.", "Write only an outline: intro, 5 points, conclusion.", "Get one outline checked before full essays."], "mid": ["Write one full essay in 3 hours this week.", "Add one example or fact to every paragraph.", "Cut any paragraph that drifts from the topic."], "high": ["One timed essay every 10 days keeps it sharp.", "Build outlines for 3 new themes.", "Ask someone strict to mark it."]}, "precis": {"low": ["One short passage daily. Find the main idea first.", "Count words. Aim for one third.", "Compare with a model answer."], "mid": ["Time yourself: 25 minutes per passage.", "Own words only. No copied phrases.", "Always add a short title."], "high": ["One a week keeps it sharp.", "Try harder passages: editorials, essays.", "Translate one paragraph both ways weekly."]}, "english": {"low": ["Learn 10 items a day from one list.", "Use each in your own sentence.", "Test yourself next morning before new ones."], "mid": ["Daily: revise 5 old, learn 5 new.", "Solve 20 past-paper MCQs on it.", "Keep a notebook of every miss."], "high": ["Revise your miss notebook weekly.", "Do one full English paper, timed.", "Move this time to a weaker topic."]}, "current": {"low": ["Read one newspaper's front page daily.", "Note 3 issues: what, who, why it matters.", "Review your notes every Sunday."], "mid": ["Group news by theme: economy, foreign, province.", "Prepare 2 views you can defend in viva.", "Learn the names of key office holders."], "high": ["Keep the daily habit. News goes stale fast.", "Talk for 1 minute on a headline.", "Link news to Balochistan where you can."]}, "science": {"low": ["Pick 5 common \"why\" questions on this.", "Explain each in 5 simple lines.", "Draw one diagram per idea."], "mid": ["Answer past-paper science questions, timed.", "Use one everyday example per answer.", "Check facts against a textbook."], "high": ["Revise your 5-line answers weekly.", "Find new \"why\" questions in daily life.", "Explain one to someone else."]}, "islamiat": {"low": ["Short notes: event, year, lesson.", "Learn references you can quote briefly.", "Quiz yourself on 10 points tomorrow."], "mid": ["Write one 1-page answer with headings.", "Add one reference, quoted correctly.", "Revise key events of the Khulafa-e-Rashideen."], "high": ["Revise notes weekly.", "Prepare viva answers on daily-life issues.", "Move this time to a weaker topic."]}, "maths": {"low": ["Learn the method from 3 solved examples.", "Do 10 easy questions slowly.", "Write down the rule you used."], "mid": ["Do 20 mixed questions, timed.", "Find the wrong step in every miss.", "Learn one shortcut per question type."], "high": ["10 questions daily to stay fast.", "Beat last week's time.", "Spend saved time on weak topics."]}, "computer": {"low": ["Open the program. Try each feature once.", "Learn 10 key terms with meanings.", "Practise typing 15 minutes."], "mid": ["Do 20 computer MCQs from past papers.", "Learn the main keyboard shortcuts.", "Build one small table or sheet yourself."], "high": ["10 MCQs a week for recall.", "Take a timed typing test weekly.", "Move this time to a weaker topic."]}, "law": {"low": ["Learn key terms first, not whole sections.", "One page: term, meaning, section number.", "Quiz yourself tomorrow."], "mid": ["Read the bare Act section once.", "Solve 15 past-paper questions on it.", "Explain each term in your own words."], "high": ["Revise your one-pager weekly.", "Practise short answers citing sections.", "Move this time to a weaker topic."]}, "teaching": {"low": ["Learn the key terms and their meaning.", "Link each to a classroom example.", "Quiz yourself tomorrow."], "mid": ["Solve 20 teaching-methods MCQs.", "Write a short lesson plan for your subject.", "Review what you missed."], "high": ["Teach a mini lesson to someone.", "Revise terms weekly.", "Move this time to a weaker topic."]}, "facts": {"low": ["Make a one-page timeline or fact sheet.", "Learn it in 3 short sessions, not one long one.", "Quiz yourself with 15 MCQs tomorrow."], "mid": ["Turn facts into questions. Answer them blind.", "Link each fact to a cause or result.", "Revisit in 3 days, then in 7."], "high": ["Do a 2-minute recall every week.", "Solve past-paper questions on it.", "Teach it to a friend in 3 minutes."]}, "subject": {"low": ["Go back to your degree notes for this unit.", "Definitions and key points on one page.", "Do 10 MCQs on it tomorrow."], "mid": ["Write one 10-mark answer from memory.", "Check it against notes. Fill the gaps.", "Do 20 MCQs on this unit."], "high": ["Revisit in 7 days with 10 MCQs.", "Write one long answer, timed.", "Move this time to a weaker unit."]}};
+const KINDS=[["essay",/essay/i],["precis",/précis|translation/i],["current",/current affairs/i],["english",/grammar|idiom|spelling|vocab|english|narration|preposition/i],
+ ["islamiat",/islam|seerah|arkan|khulafa/i],["maths",/math|\biq\b|arithmetic|analog/i],["computer",/computer|office/i],["law",/law|ppc|crpc|revenue/i],
+ ["teaching",/teaching/i],["science",/science/i],["facts",/\bgk\b|pakistan|balochistan|history|movement|constitution|affairs|1947|1857|muslim|freedom|mehrgarh/i]];
+function kindOf(topic,exam){
+  if(exam&&exam.startsWith("lec-")&&!VIVA.some(v=>v[0]===topic)){
+    if(/essay/i.test(topic))return"essay";if(/narration|voice|preposition/i.test(topic))return"english";return"subject"}
+  const k=KINDS.find(k=>k[1].test(topic));return k?k[0]:"subject"}
+function bandOf(l){if(l.sure<=2||l.recall==="no")return"low";if(l.sure===3||l.recall==="shaky")return"mid";return"high"}
+const BAND={low:["Weak spot","var(--bad)"],mid:["Getting there","var(--warn)"],high:["Strong","var(--accent)"]};
+function openImprove(l,extra){
+  const band=bandOf(l),steps=STEPS[kindOf(l.topic,l.exam)][band],b=BAND[band];
+  const why=l.recall?RECALL[l.recall]:SURE[l.sure];
+  openSheet(`<div class="label">${dayName(l.t)} · ${esc(why)}</div>
+   <div class="next">${esc(l.topic)}</div>
+   <div class="lvl" style="color:${b[1]}">${b[0]}</div>
+   <div class="label" style="margin-top:16px">Your next 3 steps</div>
+   <ol class="steps">${steps.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+   <div class="sub" style="margin:0 0 16px">${band==="high"?"Check again in a week.":"Log it again after you do these."}</div>
+   ${extra||'<button class="main" id="gotIt" style="margin:0">Got it</button>'}`);
+}
+function latestLog(topic){return S.logs.filter(l=>l.exam===S.exam&&l.topic===topic).sort((a,b)=>b.t-a.t)[0]}
 
 /* ---------- Sheets ---------- */
 function openSheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#bg").classList.add("on");$("#sheet").classList.add("on");$("#sheet").scrollTop=0}
@@ -467,12 +498,17 @@ document.addEventListener("click",ev=>{
   if(b.dataset.chip){document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===b));$("#sheet").dataset.topic=b.dataset.chip;return}
   if(b.id==="saveLog"){
     const topic=$("#sheet").dataset.topic,sure=+$("#sure").value;
-    S.logs.push({id:uid(),t:Date.now(),exam:S.exam,topic,sure,recall:null});save();closeSheet();renderAll();
-    toast("Saved · ask again tomorrow");return}
-  if(b.dataset.r){const f=pendingFollowUp();if(f){f.recall=b.dataset.r;save();renderAll();toast(b.dataset.r==="yes"?"Locked in":"Added to revise")}return}
+    const l={id:uid(),t:Date.now(),exam:S.exam,topic,sure,recall:null};
+    S.logs.push(l);save();renderAll();openImprove(l);return}
+  if(b.dataset.r){const f=pendingFollowUp();if(f){f.recall=b.dataset.r;save();renderAll();if(b.dataset.r==="yes")toast("Locked in");else openImprove(f)}return}
+  if(b.id==="gotIt"){closeSheet();toast("Saved · ask again tomorrow");return}
+  if(b.dataset.improve){const l=latestLog(b.dataset.improve);if(l)openImprove(l,`<button class="main" data-relog="${esc(l.topic)}" style="margin:0">Log study</button>`);return}
+  if(b.dataset.relog)return openLog(b.dataset.relog);
+  if(b.dataset.del){const l=S.logs.find(x=>x.id===b.dataset.del);if(l&&confirm("Delete this entry?")){S.logs=S.logs.filter(x=>x!==l);save();closeSheet();renderAll()}return}
   if(b.id==="clearSample"){if(confirm("Clear the sample week?")){S.logs=S.logs.filter(l=>!l.sample);save();renderAll();toast("Samples cleared")}return}
   if(b.classList.contains("entry")){const l=S.logs.find(x=>x.id===b.dataset.id);
-    if(l&&confirm("Delete \""+l.topic+"\"?")){S.logs=S.logs.filter(x=>x!==l);save();renderAll()}return}
+    if(l)openImprove(l,`<button class="main" id="gotIt2" style="margin:0 0 8px">Got it</button><button class="btn2 quiet" data-del="${esc(l.id)}">Delete entry</button>`);return}
+  if(b.id==="gotIt2"){closeSheet();return}
   if(b.dataset.look){S.theme=b.dataset.look;save();applyLook();return}
   if(b.id==="backupBtn")return backup();
   if(b.id==="restoreBtn")return $("#restoreFile").click();
