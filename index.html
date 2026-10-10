@@ -92,6 +92,22 @@ details[open] summary::after{content:"–"}
 .seg button{min-height:40px;border-radius:9px;font-size:14px;font-weight:500;color:var(--muted)}
 .seg button.on{background:var(--accent);color:var(--accent-ink)}
 [data-theme=brutal] .seg{border:2px solid #111;border-radius:0}[data-theme=brutal] .seg button{border-radius:0}
+.planhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.pacebtn{font-size:12px;color:var(--accent);padding:8px 0 8px 8px;min-height:36px;text-align:right}
+[data-theme=brutal] .pacebtn{color:#111;text-decoration:underline}
+.pitem{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 0;border-top:1px solid var(--line);min-height:60px}
+.plan .pitem:first-of-type{border-top:0}
+.pchk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent-ink)}
+.pitem.done .pchk{background:var(--accent);border-color:var(--accent)}
+[data-theme=brutal] .pchk{border-radius:0;border-color:#111}
+.ptxt{display:flex;flex-direction:column;min-width:0}
+.ptag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+[data-theme=brutal] .ptag{color:#111;font-weight:700}
+.pname{font-size:16px;font-weight:600}
+.psub{font-size:13px;color:var(--muted)}
+.pitem.done .pname{text-decoration:line-through;color:var(--muted)}
+.alldone{font-size:14px;color:var(--accent);padding:4px 0 6px}
+.dateinp{width:100%;min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:inherit;font-size:17px;padding:0 14px;margin-bottom:14px}
 .note{color:var(--muted);font-size:13px;padding:0 16px 14px}
 h2{font-size:22px;margin:4px 0 16px;font-weight:600}
 .day{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
@@ -230,7 +246,7 @@ body.intro .tabs{animation:spUp .45s ease-out .2s both}
     <div class="sub" id="pctSub"></div>
   </div>
   <div id="followUp"></div>
-  <div class="card"><div class="label">Next up</div><div class="next" id="nextTopic"></div></div>
+  <div id="plan"></div>
   <button class="main" id="logBtn">Log study</button>
   <div id="quiz"></div>
   <div id="guide"></div>
@@ -442,10 +458,9 @@ function renderToday(){
   const f=pendingFollowUp();
   $("#followUp").innerHTML=f?`<div class="card"><div class="label">${dayName(f.t)} you studied</div><div class="next">${esc(f.topic)}</div><div class="sub">Still clear?</div>
     <div class="row3"><button class="opt" data-r="yes">Yes</button><button class="opt" data-r="shaky">Shaky</button><button class="opt" data-r="no">Forgot</button></div></div>`:"";
-  const n=nextTopic(S.exam);
-  const st=status(S.exam,n[0]);
-  $("#nextTopic").innerHTML=esc(n[0])+(n[1]==="H"?'<span class="tag h">High-yield</span>':"")+(st==="rev"?'<span class="tag">Revise</span>':"");
-  $("#logBtn").dataset.topic=n[0];
+  const pl=planFor();$("#plan").innerHTML=planCard(pl);
+  const firstLearn=pl.learn.find(t=>!studiedToday(t));
+  $("#logBtn").dataset.topic=firstLearn||pl.learn[0]||nextTopic(S.exam)[0];
   $("#quiz").innerHTML=quizCard();
   const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
   const topics=e.topics.map(t=>{const s=status(S.exam,t[0]);
@@ -591,6 +606,62 @@ function finishQuiz(){
   Q=null;renderAll();
 }
 
+
+/* ---------- Today's plan ---------- */
+function studiedToday(topic){const d=startOfDay(Date.now());return S.logs.some(l=>l.exam===S.exam&&l.topic===topic&&l.t>=d)}
+function lastLogT(topic){const ls=S.logs.filter(l=>l.exam===S.exam&&l.topic===topic);return ls.length?Math.max(...ls.map(l=>l.t)):0}
+function daysLeft(){const d=(S.dates||{})[S.exam];if(!d)return null;const t=new Date(d+"T00:00:00").getTime();return Math.round((t-startOfDay(Date.now()))/DAY)}
+function pace(){const dl=daysLeft();if(dl==null||dl<1)return null;const c=coverage(S.exam),left=c.n-c.done;return {dl,left,per:Math.max(1,Math.ceil(left/dl))}}
+function weakestSubject(){
+  const agg={};(S.quiz||[]).forEach(r=>{for(const s in r.per){const a=agg[s]||(agg[s]={n:0,r:0});a.n+=r.per[s].n;a.r+=r.per[s].r}});
+  const subs=Object.keys(QB),untried=subs.filter(k=>!agg[k]);
+  const dayN=Math.floor(startOfDay(Date.now())/DAY);
+  if(untried.length)return untried[dayN%untried.length];
+  return subs.sort((a,b)=>agg[a].r/agg[a].n-agg[b].r/agg[b].n)[0];
+}
+function planFor(){
+  const today=todayKey();
+  if(S.plan&&S.plan.day===today&&S.plan.exam===S.exam)return S.plan;
+  const e=EXAM[S.exam],order={H:0,M:1,L:2},sorted=e.topics.slice().sort((a,b)=>order[a[1]]-order[b[1]]);
+  const pc=pace(),nLearn=Math.min(3,pc?pc.per:1);
+  let learn=sorted.filter(t=>status(S.exam,t[0])===null).slice(0,nLearn).map(t=>t[0]);
+  const weak=sorted.filter(t=>status(S.exam,t[0])==="rev").map(t=>t[0]).sort((a,b)=>lastLogT(a)-lastLogT(b));
+  const stale=sorted.filter(t=>status(S.exam,t[0])==="ok"&&Date.now()-lastLogT(t[0])>=7*DAY).map(t=>t[0]).sort((a,b)=>lastLogT(a)-lastLogT(b));
+  let revise=weak[0]||stale[0]||null;
+  if(!learn.length)learn=sorted.map(t=>t[0]).filter(t=>t!==revise).sort((a,b)=>lastLogT(a)-lastLogT(b)).slice(0,1);
+  S.plan={day:today,exam:S.exam,learn,revise,revWhy:weak[0]?"weak":"week",quiz:weakestSubject()};save();
+  return S.plan;
+}
+function planCard(pl){
+  const items=[];
+  pl.learn.forEach(t=>items.push({k:"learn",t,done:studiedToday(t),tag:"Learn",sub:(EXAM[S.exam].topics.find(x=>x[0]===t)||[])[1]==="H"?"High-yield":"New topic"}));
+  if(pl.revise)items.push({k:"revise",t:pl.revise,done:studiedToday(pl.revise),tag:"Revise",sub:pl.revWhy==="weak"?"Your weak spot":"Not seen in a week"});
+  if(pl.quiz&&QB[pl.quiz])items.push({k:"quiz",t:QB[pl.quiz].name+" quiz",q:pl.quiz,done:!!doneToday(pl.quiz),tag:"Quiz",sub:"5 Qs · "+LV[curLevel()][0]});
+  const done=items.filter(i=>i.done).length,pc=pace(),dl=daysLeft();
+  const paceTxt=dl==null?"Set exam date":dl<1?"Exam date passed":`${dl} day${dl===1?"":"s"} left · ${pc.per} topic${pc.per>1?"s":""}/day`;
+  return `<div class="card plan"><div class="planhead"><div class="label" style="margin:0">Today's plan · ${done}/${items.length}</div>
+    <button class="pacebtn" id="paceBtn">${esc(paceTxt)}</button></div>
+    ${done===items.length?'<div class="alldone">All done for today. Rest, or take a quiz.</div>':""}
+    ${items.map(i=>`<button class="pitem${i.done?" done":""}" data-plan="${i.k}" data-pt="${esc(i.q||i.t)}">
+      <span class="pchk">${i.done?"✓":""}</span>
+      <span class="ptxt"><span class="ptag">${i.tag}</span><span class="pname">${esc(i.t)}</span><span class="psub">${esc(i.sub)}</span></span></button>`).join("")}</div>`;
+}
+function topUpPlan(){
+  /* keep today's ticks; only add learn topics if the new pace needs more */
+  if(!S.plan||S.plan.day!==todayKey()||S.plan.exam!==S.exam){S.plan=null;return}
+  const pc=pace(),want=Math.min(3,pc?pc.per:1),order={H:0,M:1,L:2};
+  const fresh=EXAM[S.exam].topics.slice().sort((a,b)=>order[a[1]]-order[b[1]]).map(t=>t[0])
+    .filter(t=>status(S.exam,t)===null&&!S.plan.learn.includes(t)&&t!==S.plan.revise);
+  while(S.plan.learn.length<want&&fresh.length)S.plan.learn.push(fresh.shift());
+}
+function openPace(){
+  const cur=(S.dates||{})[S.exam]||"",min=new Date(Date.now()+DAY).toISOString().slice(0,10);
+  openSheet(`<div class="label">${esc(EXAM[S.exam].name)}</div><div class="next" style="margin-bottom:14px">When is your exam?</div>
+   <input type="date" id="examDate" min="${min}" value="${esc(cur)}" class="dateinp">
+   <button class="main" id="saveDate" style="margin:0 0 8px">Save</button>
+   ${cur?'<button class="btn2 quiet" id="clearDate">Remove date</button>':""}`);
+}
+
 /* ---------- Sheets ---------- */
 function openSheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#bg").classList.add("on");$("#sheet").classList.add("on");$("#sheet").scrollTop=0}
 function closeSheet(){$("#bg").classList.remove("on");$("#sheet").classList.remove("on")}
@@ -633,6 +704,13 @@ document.addEventListener("click",ev=>{
   if(b.classList.contains("entry")){const l=S.logs.find(x=>x.id===b.dataset.id);
     if(l)openImprove(l,`<button class="main" id="gotIt2" style="margin:0 0 8px">Got it</button><button class="btn2 quiet" data-del="${esc(l.id)}">Delete entry</button>`);return}
   if(b.id==="gotIt2"){closeSheet();return}
+  if(b.dataset.plan){const k=b.dataset.plan,t=b.dataset.pt;
+    if(k==="learn")return openLog(t);
+    if(k==="quiz")return startQuiz(t);
+    if(k==="revise"){const l=latestLog(t);return l?openImprove(l,`<button class="main" data-relog="${esc(t)}" style="margin:0">Log study</button>`):openLog(t)}}
+  if(b.id==="paceBtn")return openPace();
+  if(b.id==="saveDate"){const v=$("#examDate").value;if(!v){toast("Pick a date");return}S.dates=S.dates||{};S.dates[S.exam]=v;topUpPlan();save();closeSheet();renderAll();toast("Plan paced to your exam");return}
+  if(b.id==="clearDate"){delete S.dates[S.exam];save();closeSheet();renderAll();return}
   if(b.dataset.qlevel){S.qlevel=b.dataset.qlevel;save();renderToday();return}
   if(b.dataset.quiz)return startQuiz(b.dataset.quiz);
   if(b.dataset.opt!=null&&b.classList.contains("qopt"))return answer(+b.dataset.opt);
@@ -660,7 +738,7 @@ $("#restoreFile").addEventListener("change",ev=>{
       if(!d||!Array.isArray(d.logs))throw 0;
       const logs=d.logs.filter(l=>l&&typeof l.topic==="string"&&typeof l.t==="number").map(l=>({id:String(l.id||uid()),t:l.t,exam:String(l.exam||"pcs"),topic:l.topic,sure:Math.min(5,Math.max(1,+l.sure||3)),recall:["yes","shaky","no"].includes(l.recall)?l.recall:null,sample:!!l.sample}));
       if(!confirm("Replace your data with this backup ("+logs.length+" entries)?"))return;
-      S={v:1,qlevel:LV&&LV[d.qlevel]?d.qlevel:"m",qs:(d.qs&&typeof d.qs==="object")?d.qs:{},quiz:Array.isArray(d.quiz)?d.quiz.filter(r=>r&&typeof r.t==="number"):[],exam:EXAM[d.exam]?d.exam:"pcs",theme:LOOKS.some(l=>l[0]===d.theme)?d.theme:(S.theme||"minimal"),logs};save();renderAll();toast("Restored")}
+      S={v:1,dates:(d.dates&&typeof d.dates==="object")?d.dates:{},qlevel:LV&&LV[d.qlevel]?d.qlevel:"m",qs:(d.qs&&typeof d.qs==="object")?d.qs:{},quiz:Array.isArray(d.quiz)?d.quiz.filter(r=>r&&typeof r.t==="number"):[],exam:EXAM[d.exam]?d.exam:"pcs",theme:LOOKS.some(l=>l[0]===d.theme)?d.theme:(S.theme||"minimal"),logs};save();renderAll();toast("Restored")}
     catch(e){toast("That file isn't a backup")}
     ev.target.value=""};
   r.readAsText(f);
