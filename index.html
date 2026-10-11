@@ -228,12 +228,17 @@ input[type=range]::-moz-range-thumb{width:30px;height:30px;border:0;border-radiu
 #splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
 .sp-in{text-align:center}
 .sp-logo{width:112px;height:112px;display:block;margin:0 auto 18px}
-.sp-arc{stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw .75s cubic-bezier(.65,0,.35,1) .1s forwards}
-.sp-tick{stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw .35s ease-out .7s forwards}
 .sp-name{font-size:24px;font-weight:600;letter-spacing:-.01em;opacity:0;animation:spUp .45s ease-out .55s forwards}
 .sp-tag{font-size:13px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;opacity:0;animation:spUp .45s ease-out .75s forwards}
-[data-theme=neon] .sp-arc{filter:drop-shadow(0 0 4px #39ff9e)}
 @keyframes spDraw{to{stroke-dashoffset:0}}
+.sp-pl,.sp-pr{transform-box:view-box;transform-origin:50px 50px;transform:scaleX(0);animation:spOpen .6s cubic-bezier(.2,.8,.2,1) .1s forwards}
+.sp-ln{stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw .35s ease-out forwards}
+.sp-pl .sp-ln:nth-child(1),.sp-pr .sp-ln:nth-child(1){animation-delay:.55s}.sp-pl .sp-ln:nth-child(2),.sp-pr .sp-ln:nth-child(2){animation-delay:.62s}
+.sp-pl .sp-ln:nth-child(3),.sp-pr .sp-ln:nth-child(3){animation-delay:.69s}.sp-pl .sp-ln:nth-child(4),.sp-pr .sp-ln:nth-child(4){animation-delay:.76s}
+.sp-bm{opacity:0;transform:translateY(-14px);animation:spDrop .4s cubic-bezier(.3,1.4,.5,1) .7s forwards}
+@keyframes spOpen{to{transform:scaleX(1)}}
+@keyframes spDrop{to{opacity:1;transform:none}}
+[data-theme=neon] .sp-bm{filter:drop-shadow(0 0 3px #39ff9e)}
 @keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 body.intro #s-today>*{opacity:0;animation:spUp .45s ease-out forwards}
 body.intro #s-today>*:nth-child(1){animation-delay:.02s}body.intro #s-today>*:nth-child(2){animation-delay:.06s}
@@ -247,9 +252,13 @@ body.intro .tabs{animation:spUp .45s ease-out .2s both}
 </head>
 <body>
 <div id="splash" aria-hidden="true"><div class="sp-in">
-  <svg viewBox="0 0 100 100" class="sp-logo"><circle cx="50" cy="50" r="30" fill="none" stroke="var(--line)" stroke-width="6.5"/>
-  <circle class="sp-arc" cx="50" cy="50" r="30" fill="none" stroke="var(--accent)" stroke-width="6.5" stroke-linecap="round" pathLength="1" transform="rotate(-90 50 50)"/>
-  <path class="sp-tick" d="M37 51 L46 60 L64 41" fill="none" stroke="var(--text)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></svg>
+  <svg viewBox="0 0 100 100" class="sp-logo">
+  <g class="sp-pl"><polygon points="50,39 21,34 21,71 50,76" fill="var(--text)"/>
+   <g stroke="#9aa0a6" stroke-width="1.6" stroke-linecap="round"><line class="sp-ln" x1="26" y1="43" x2="45" y2="45.5" pathLength="1"/><line class="sp-ln" x1="26" y1="50" x2="45" y2="52.5" pathLength="1"/><line class="sp-ln" x1="26" y1="57" x2="45" y2="59.5" pathLength="1"/><line class="sp-ln" x1="26" y1="64" x2="45" y2="66.5" pathLength="1"/></g></g>
+  <g class="sp-pr"><polygon points="50,39 79,34 79,71 50,76" fill="#cfcbc2"/>
+   <g stroke="#a3a8ad" stroke-width="1.6" stroke-linecap="round"><line class="sp-ln" x1="55" y1="45.5" x2="74" y2="43" pathLength="1"/><line class="sp-ln" x1="55" y1="52.5" x2="74" y2="50" pathLength="1"/><line class="sp-ln" x1="55" y1="59.5" x2="74" y2="57" pathLength="1"/><line class="sp-ln" x1="55" y1="66.5" x2="74" y2="64" pathLength="1"/></g></g>
+  <line x1="50" y1="39" x2="50" y2="76" stroke="var(--bg)" stroke-width="1.4"/>
+  <polygon class="sp-bm" points="64,33 70.5,32 70.5,53 67.2,49.6 64,54" fill="var(--accent)"/></svg>
   <div class="sp-name">BPSC Prep</div><div class="sp-tag">Study. Log. Crack it.</div></div></div>
 <div class="app">
 
