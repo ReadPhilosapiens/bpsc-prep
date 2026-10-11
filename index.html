@@ -109,6 +109,7 @@ details[open] summary::after{content:"–"}
 .pitem.done .pname{text-decoration:line-through;color:var(--muted)}
 .alldone{font-size:14px;color:var(--accent);padding:4px 0 6px}
 .dateinp{width:100%;min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:inherit;font-size:17px;padding:0 14px;margin-bottom:14px}
+.banner.inst{border-style:solid;border-color:var(--accent);color:var(--text)}
 .note{color:var(--muted);font-size:13px;padding:0 16px 14px}
 h2{font-size:22px;margin:4px 0 16px;font-weight:600}
 .day{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
@@ -240,6 +241,7 @@ body.intro .tabs{animation:spUp .45s ease-out .2s both}
 
 <section class="screen on" id="s-today">
   <div class="top"><span class="brand">BPSC Prep</span><button class="pill" id="examPill"></button></div>
+  <div id="installBar"></div>
   <div id="sampleBanner"></div>
   <div class="hero">
     <div class="ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="var(--line)" stroke-width="7"/><circle id="arc" cx="50" cy="50" r="44" fill="none" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="276.5"/></svg>
@@ -455,6 +457,7 @@ function renderToday(){
   if(booting){heroTarget=c.pct;$("#pct").textContent="0%";$("#arc").style.strokeDashoffset=276.5}
   else{$("#pct").textContent=c.pct+"%";$("#arc").style.strokeDashoffset=276.5*(1-c.pct/100)}
   $("#pctSub").textContent=c.done+" of "+c.n+" topics solid";
+  renderInstall();
   $("#sampleBanner").innerHTML=S.logs.some(l=>l.sample)?'<div class="banner"><span>Showing a sample week</span><button id="clearSample">Clear samples</button></div>':"";
   const f=pendingFollowUp();
   $("#followUp").innerHTML=f?`<div class="card"><div class="label">${dayName(f.t)} you studied</div><div class="next">${esc(f.topic)}</div><div class="sub">Still clear?</div>
@@ -663,6 +666,21 @@ function openPace(){
    ${cur?'<button class="btn2 quiet" id="clearDate">Remove date</button>':""}`);
 }
 
+
+/* ---------- Install ---------- */
+let deferredInstall=null;
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const inAppBrowser=()=>/Instagram|FBAN|FBAV|FB_IAB|Line\/|WhatsApp|Snapchat|TikTok|; wv\)/i.test(navigator.userAgent);
+function renderInstall(){
+  const el=$("#installBar");if(!el)return;
+  if(isStandalone()){el.innerHTML="";return}
+  if(deferredInstall){el.innerHTML='<div class="banner inst"><span>Install BPSC Prep on this phone</span><button id="installBtn">Install</button></div>';return}
+  if(/Android/i.test(navigator.userAgent)&&inAppBrowser()){el.innerHTML='<div class="banner inst"><span>To install, open this page in Chrome: tap ⋮ → Open in Chrome</span></div>';return}
+  el.innerHTML="";
+}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;renderInstall()});
+window.addEventListener("appinstalled",()=>{deferredInstall=null;renderInstall();toast("Installed")});
+
 /* ---------- Sheets ---------- */
 function openSheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#bg").classList.add("on");$("#sheet").classList.add("on");$("#sheet").scrollTop=0}
 function closeSheet(){$("#bg").classList.remove("on");$("#sheet").classList.remove("on")}
@@ -712,6 +730,7 @@ document.addEventListener("click",ev=>{
   if(b.id==="paceBtn")return openPace();
   if(b.id==="saveDate"){const v=$("#examDate").value;if(!v){toast("Pick a date");return}S.dates=S.dates||{};S.dates[S.exam]=v;topUpPlan();save();closeSheet();renderAll();toast("Plan paced to your exam");return}
   if(b.id==="clearDate"){delete S.dates[S.exam];save();closeSheet();renderAll();return}
+  if(b.id==="installBtn"){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.finally(()=>{deferredInstall=null;renderInstall()})}return}
   if(b.dataset.qlevel){S.qlevel=b.dataset.qlevel;save();renderToday();return}
   if(b.dataset.quiz)return startQuiz(b.dataset.quiz);
   if(b.dataset.opt!=null&&b.classList.contains("qopt"))return answer(+b.dataset.opt);
@@ -761,7 +780,7 @@ function openingAnimation(){
   sp.addEventListener("click",finish);setTimeout(finish,1250);
 }
 load();renderAll();openingAnimation();
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
