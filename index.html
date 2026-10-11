@@ -96,7 +96,7 @@ details[open] summary::after{content:"–"}
 .planhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .pacebtn{font-size:12px;color:var(--accent);padding:8px 0 8px 8px;min-height:36px;text-align:right}
 [data-theme=brutal] .pacebtn{color:#111;text-decoration:underline}
-.pitem{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 0;border-top:1px solid var(--line);min-height:60px}
+.pitem{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px 0;border-top:1px solid var(--line);min-height:50px}
 .plan .pitem:first-of-type{border-top:0}
 .pchk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent-ink)}
 .pitem.done .pchk{background:var(--accent);border-color:var(--accent)}
@@ -104,7 +104,7 @@ details[open] summary::after{content:"–"}
 .ptxt{display:flex;flex-direction:column;min-width:0}
 .ptag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 [data-theme=brutal] .ptag{color:#111;font-weight:700}
-.pname{font-size:16px;font-weight:600}
+.pname{font-size:15px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .psub{font-size:13px;color:var(--muted)}
 .pitem.done .pname{text-decoration:line-through;color:var(--muted)}
 .alldone{font-size:14px;color:var(--accent);padding:4px 0 6px}
@@ -116,6 +116,14 @@ details[open] summary::after{content:"–"}
 .pnl summary span{display:flex;flex-direction:column}.pnl summary small{color:var(--muted);font-weight:400;font-size:13px}
 .vz{display:grid;grid-template-columns:1fr 1fr;gap:8px}.vz .btn2{margin:0}
 .ur{font-family:"Noto Nastaliq Urdu","Jameel Noori Nastaleeq","Urdu Typesetting",serif;font-size:17px;line-height:2.1;padding:4px 16px 14px;text-align:right;color:var(--text)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 18px}
+.tile{background:var(--surface);border:var(--bw) solid var(--line);border-radius:14px;padding:14px 8px;min-height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:var(--shadow)}
+.tile b{font-size:15px;font-weight:600}.tile small{font-size:11px;color:var(--muted);text-align:center;line-height:1.25}
+.tile:active{opacity:.8}
+.main.ghost{background:var(--surface);color:var(--text);border:var(--bw) solid var(--line)}
+#startBtn{margin:0 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 18px}
+.ring{width:124px;height:124px}.ring .big{font-size:36px}.ring .sub{font-size:12px;margin-top:2px}.hero{padding:0 0 12px}.hero>.sub{margin-top:4px}
+#followUp .card{padding:12px 14px}#followUp .next{font-size:16px}#followUp .row3{margin-top:8px}#followUp .opt{min-height:44px}
 .note{color:var(--muted);font-size:13px;padding:0 16px 14px}
 h2{font-size:22px;margin:4px 0 16px;font-weight:600}
 .day{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
@@ -255,10 +263,13 @@ body.intro .tabs{animation:spUp .45s ease-out .2s both}
     <div class="sub" id="pctSub"></div>
   </div>
   <div id="followUp"></div>
+  <button class="main" id="startBtn">Start</button>
   <div id="plan"></div>
-  <button class="main" id="logBtn">Log study</button>
-  <div id="quiz"></div>
-  <div id="guide"></div>
+  <div class="tiles">
+    <button class="tile" id="tQuiz"><b>Quiz</b><small id="tQuizSub">8 subjects</small></button>
+    <button class="tile" id="tViva"><b>Viva</b><small id="tVivaSub">Real questions</small></button>
+    <button class="tile" id="tGuide"><b>Exam guide</b><small>Paper · syllabus</small></button>
+  </div>
 </section>
 
 <section class="screen" id="s-history">
@@ -466,24 +477,14 @@ function renderToday(){
   renderInstall();
   $("#sampleBanner").innerHTML=S.logs.some(l=>l.sample)?'<div class="banner"><span>Showing a sample week</span><button id="clearSample">Clear samples</button></div>':"";
   const f=pendingFollowUp();
-  $("#followUp").innerHTML=f?`<div class="card"><div class="label">${dayName(f.t)} you studied</div><div class="next">${esc(f.topic)}</div><div class="sub">Still clear?</div>
+  $("#followUp").innerHTML=f?`<div class="card"><div class="label">${dayName(f.t)}: still clear?</div><div class="next">${esc(f.topic)}</div>
     <div class="row3"><button class="opt" data-r="yes">Yes</button><button class="opt" data-r="shaky">Shaky</button><button class="opt" data-r="no">Forgot</button></div></div>`:"";
   const pl=planFor();$("#plan").innerHTML=planCard(pl);
-  const firstLearn=pl.learn.find(t=>!studiedToday(t));
-  $("#logBtn").dataset.topic=firstLearn||pl.learn[0]||nextTopic(S.exam)[0];
-  $("#quiz").innerHTML=quizCard();
-  const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
-  const topics=e.topics.map(t=>{const s=status(S.exam,t[0]);
-    return `<button class="topic" data-topic="${esc(t[0])}"><span>${esc(t[0])}${t[1]==="H"?'<span class="tag h">High</span>':""}</span><span class="st ${s||""}">${s==="ok"?"Solid":s==="rev"?"Revise":"—"}</span></button>`}).join("");
-  const wasOpen=[...document.querySelectorAll("#guide details[open]>summary")].map(x=>x.textContent.slice(0,12));
-  $("#guide").innerHTML=`
-   ${vivaSection()}
-   <details><summary>The paper</summary><ul class="lines">${li(e.pattern)}</ul></details>
-   <details><summary>Syllabus · ${c.done}/${c.n}</summary><div class="lines">${topics}</div><div class="note">Weights are estimates. BPSC does not publish them.</div></details>
-   <details><summary>How to crack it</summary>${e.crack.map(c=>`<div class="ch">${esc(c[0])}</div><ul class="lines">${li(c[1])}</ul>`).join("")}</details>
-   <details><summary>What changed</summary><ul class="lines">${e.trend.map(t=>`<li><span class="yr">${esc(t[0])}</span>${esc(t[1])}</li>`).join("")}</ul></details>
-   <details><summary>Past papers</summary><ul class="lines">${e.papers.map(p=>`<li><a href="${esc(p[1])}" target="_blank" rel="noopener">${esc(p[0])}</a></li>`).join("")}</ul><div class="note">Unofficial copies. Links need internet.</div></details>`;
-  document.querySelectorAll("#guide details>summary").forEach(x=>{if(wasOpen.includes(x.textContent.slice(0,12)))x.parentNode.open=true});
+  const nx=planItems(pl).find(x=>!x.done),sb=$("#startBtn");
+  if(nx){sb.textContent=(nx.k==="learn"?"Start: ":nx.k==="revise"?"Revise: ":"")+nx.t;sb.dataset.plan=nx.k;sb.dataset.pt=nx.q||nx.t;sb.classList.remove("ghost")}
+  else{sb.textContent="Log extra study";delete sb.dataset.plan;sb.dataset.pt="";sb.classList.add("ghost")}
+  const qd=Object.keys(QB).filter(k=>doneToday(k)).length;$("#tQuizSub").textContent=qd?qd+" of 8 done today":"8 subjects · "+LV[curLevel()][0];
+  const vr=vivaReady();$("#tVivaSub").textContent=vr.ok?vr.ok+"/"+vr.n+" ready":"5,112 real Qs";
 }
 
 /* ---------- Render: History ---------- */
@@ -646,20 +647,24 @@ function planFor(){
   S.plan={day:today,exam:S.exam,learn,revise,revWhy:weak[0]?"weak":"week",quiz:weakestSubject()};save();
   return S.plan;
 }
-function planCard(pl){
+function planItems(pl){
   const items=[];
   pl.learn.forEach(t=>items.push({k:"learn",t,done:studiedToday(t),tag:"Learn",sub:(EXAM[S.exam].topics.find(x=>x[0]===t)||[])[1]==="H"?"High-yield":"New topic"}));
   if(pl.revise)items.push({k:"revise",t:pl.revise,done:studiedToday(pl.revise),tag:"Revise",sub:pl.revWhy==="weak"?"Your weak spot":"Not seen in a week"});
   items.push({k:"viva",t:"Viva drill",q:"all",done:vivaToday(),tag:"Viva",sub:"5 real interview Qs · out loud"});
   if(pl.quiz&&QB[pl.quiz])items.push({k:"quiz",t:QB[pl.quiz].name+" quiz",q:pl.quiz,done:!!doneToday(pl.quiz),tag:"Quiz",sub:"5 Qs · "+LV[curLevel()][0]});
+  return items;
+}
+function planCard(pl){
+  const items=planItems(pl);
   const done=items.filter(i=>i.done).length,pc=pace(),dl=daysLeft();
   const paceTxt=dl==null?"Set exam date":dl<1?"Exam date passed":`${dl} day${dl===1?"":"s"} left · ${pc.per} topic${pc.per>1?"s":""}/day`;
   return `<div class="card plan"><div class="planhead"><div class="label" style="margin:0">Today's plan · ${done}/${items.length}</div>
     <button class="pacebtn" id="paceBtn">${esc(paceTxt)}</button></div>
-    ${done===items.length?'<div class="alldone">All done for today. Rest, or take a quiz.</div>':""}
+    ${done===items.length?'<div class="alldone">All done for today. Well done.</div>':""}
     ${items.map(i=>`<button class="pitem${i.done?" done":""}" data-plan="${i.k}" data-pt="${esc(i.q||i.t)}">
       <span class="pchk">${i.done?"✓":""}</span>
-      <span class="ptxt"><span class="ptag">${i.tag}</span><span class="pname">${esc(i.t)}</span><span class="psub">${esc(i.sub)}</span></span></button>`).join("")}</div>`;
+      <span class="pname">${esc(i.t)}</span><span class="ptag">${i.tag}</span></button>`).join("")}</div>`;
 }
 function topUpPlan(){
   /* keep today's ticks; only add learn topics if the new pace needs more */
@@ -768,6 +773,31 @@ function vivaSection(){
     <div style="padding:0 16px 14px;display:grid;gap:8px"><button class="main" data-viva="all" style="margin:0">Practice viva · 5 Qs</button><button class="btn2" data-viva="qa" style="margin:0">Q&amp;A with model answers · ${VV.qa.length}</button><button class="btn2" id="panelsBtn" style="margin:0">Know your panel</button></div></details>`;
 }
 
+/* ---------- Today sheets ---------- */
+function openGuide(){
+  const e=EXAM[S.exam],c=coverage(S.exam),li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
+  const topics=e.topics.map(t=>{const st=status(S.exam,t[0]);
+    return `<button class="topic" data-topic="${esc(t[0])}"><span>${esc(t[0])}${t[1]==="H"?'<span class="tag h">High</span>':""}</span><span class="st ${st||""}">${st==="ok"?"Solid":st==="rev"?"Revise":"—"}</span></button>`}).join("");
+  openSheet(`<div class="label">Exam guide</div><div class="next" style="margin-bottom:14px">${esc(e.name)}</div>
+   <details open><summary>How to crack it</summary>${e.crack.map(x=>`<div class="ch">${esc(x[0])}</div><ul class="lines">${li(x[1])}</ul>`).join("")}</details>
+   <details><summary>The paper</summary><ul class="lines">${li(e.pattern)}</ul></details>
+   <details><summary>Syllabus · ${c.done}/${c.n}</summary><div class="lines">${topics}</div><div class="note">Weights are estimates. BPSC does not publish them.</div></details>
+   <details><summary>What changed</summary><ul class="lines">${e.trend.map(t=>`<li><span class="yr">${esc(t[0])}</span>${esc(t[1])}</li>`).join("")}</ul></details>
+   <details><summary>Past papers</summary><ul class="lines">${e.papers.map(x=>`<li><a href="${esc(x[1])}" target="_blank" rel="noopener">${esc(x[0])}</a></li>`).join("")}</ul><div class="note">Unofficial copies. Links need internet.</div></details>
+   <button class="btn2 quiet" id="examPill2" style="margin-top:6px">Change exam</button>`);
+}
+function openQuiz(){openSheet(quizCard().replace('class="card quizcard"','class="quizcard"'))}
+function openViva(){
+  const top=VV.common.slice().sort((a,b)=>b.by-a.by).slice(0,6),r=vivaReady();
+  openSheet(`<div class="label">Viva prep</div><div class="next" style="margin-bottom:4px">${VSTAT.n.toLocaleString()} real interview questions</div>
+   <div class="sub" style="margin:0 0 14px">${VSTAT.acc} interviews · most run 25–30 min · ready ${r.ok}/${r.n}</div>
+   <div style="display:grid;gap:8px;margin-bottom:16px">
+    <button class="main" data-viva="all" style="margin:0">Practice · 5 questions</button>
+    <button class="btn2" data-viva="qa" style="margin:0">With model answers · ${VV.qa.length}</button>
+    <button class="btn2" id="panelsBtn" style="margin:0">Know your panel</button></div>
+   <details><summary>What every panel asks</summary><ul class="lines">${top.map(t=>`<li><span class="yr">${t.by}/9</span>${esc(t.t)}</li>`).join("")}</ul></details>`);
+}
+
 /* ---------- Sheets ---------- */
 function openSheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#bg").classList.add("on");$("#sheet").classList.add("on");$("#sheet").scrollTop=0}
 function closeSheet(){$("#bg").classList.remove("on");$("#sheet").classList.remove("on")}
@@ -823,7 +853,12 @@ document.addEventListener("click",ev=>{
   if(b.id==="vagain")return startViva(b.dataset.vk);
   if(b.id==="panelsBtn")return openPanels();
   if(b.id==="installBtn"){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.finally(()=>{deferredInstall=null;renderInstall()})}return}
-  if(b.dataset.qlevel){S.qlevel=b.dataset.qlevel;save();renderToday();return}
+  if(b.dataset.qlevel){S.qlevel=b.dataset.qlevel;save();renderToday();openQuiz();return}
+  if(b.id==="tQuiz")return openQuiz();
+  if(b.id==="tViva")return openViva();
+  if(b.id==="tGuide")return openGuide();
+  if(b.id==="examPill2")return openExams();
+  if(b.id==="startBtn"&&!b.dataset.plan)return openLog(nextTopic(S.exam)[0]);
   if(b.dataset.quiz)return startQuiz(b.dataset.quiz);
   if(b.dataset.opt!=null&&b.classList.contains("qopt"))return answer(+b.dataset.opt);
   if(b.id==="qnext"){if(Q.at<Q.items.length-1){Q.at++;showQ()}else finishQuiz();return}
