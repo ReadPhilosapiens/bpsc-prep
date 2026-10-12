@@ -150,7 +150,13 @@ h2{font-size:22px;margin:4px 0 16px;font-weight:600}
 .sheet-bg.on{display:block}
 .sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--surface);border-radius:20px 20px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow:auto;z-index:11;transform:translateY(105%);transition:transform .22s ease,visibility .22s;visibility:hidden}
 .sheet.on{transform:none;visibility:visible}
-.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
+.shbar{position:sticky;top:-18px;z-index:2;display:flex;align-items:center;justify-content:space-between;margin:-18px -16px 8px;padding:8px 8px 4px;background:inherit;border-radius:inherit;touch-action:none}
+.shbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.shbtn:active{background:var(--line)}
+.shbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.shbtn.hide{visibility:hidden}
+.sheet.drag{transition:none}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
 .chip{min-height:44px;padding:10px 14px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);font-size:14px;text-align:left}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
@@ -808,8 +814,38 @@ function openViva(){
 }
 
 /* ---------- Sheets ---------- */
-function openSheet(html){$("#sheet").innerHTML='<div class="grab"></div>'+html;$("#bg").classList.add("on");$("#sheet").classList.add("on");$("#sheet").scrollTop=0}
-function closeSheet(){$("#bg").classList.remove("on");$("#sheet").classList.remove("on")}
+/* Navigation: X closes the whole sheet, ← goes back one screen, phone back = ←, swipe down = X */
+let NS=[],cur=null,hd=0,skipPop=0,navving=false;
+const sheetOpen=()=>$("#sheet").classList.contains("on");
+const IC={back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'};
+function nav(fn){
+  if(sheetOpen()&&cur){NS.push(cur);history.pushState({sh:1},"");hd++}else NS=[];
+  cur=fn;navving=true;try{fn()}finally{navving=false}
+}
+function openSheet(html){
+  if(!sheetOpen()){if(!navving){NS=[];cur=null}history.pushState({sh:1},"");hd=1}
+  const sh=$("#sheet");sh.style.transform="";
+  sh.innerHTML=`<div class="shbar"><button class="shbtn${NS.length?"":" hide"}" id="shBack" aria-label="Back">${IC.back}</button><div class="grab"></div><button class="shbtn" id="shX" aria-label="Close">${IC.x}</button></div>`+html;
+  $("#bg").classList.add("on");sh.classList.add("on");sh.scrollTop=0;
+}
+function hideSheet(){NS=[];cur=null;const sh=$("#sheet");sh.style.transform="";$("#bg").classList.remove("on");sh.classList.remove("on")}
+function closeSheet(){if(hd>0){skipPop=1;history.go(-hd);hd=0}hideSheet()}
+function sheetBack(){if(hd>0)history.back();else hideSheet()}
+window.addEventListener("popstate",()=>{
+  if(skipPop){skipPop=0;return}
+  if(!sheetOpen())return;
+  hd=Math.max(0,hd-1);
+  if(NS.length){cur=NS.pop();navving=true;try{cur()}finally{navving=false}}else hideSheet();
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetOpen())closeSheet()});
+(function swipeDown(){
+  const sh=$("#sheet");let y0=null,dy=0;
+  sh.addEventListener("touchstart",e=>{if(sh.scrollTop>0&&!e.target.closest(".shbar")){y0=null;return}y0=e.touches[0].clientY;dy=0},{passive:true});
+  sh.addEventListener("touchmove",e=>{if(y0==null)return;dy=e.touches[0].clientY-y0;
+    if(dy>0&&(sh.scrollTop<=0||e.target.closest(".shbar"))){sh.classList.add("drag");sh.style.transform=`translateY(${dy}px)`;if(e.cancelable)e.preventDefault()}},{passive:false});
+  const end=()=>{if(y0==null)return;sh.classList.remove("drag");if(dy>90)closeSheet();else sh.style.transform="";y0=null;dy=0};
+  sh.addEventListener("touchend",end);sh.addEventListener("touchcancel",end);
+})();
 function openLog(topic){
   const e=EXAM[S.exam];
   openSheet(`<div class="label">What did you study?</div>
@@ -833,7 +869,9 @@ document.addEventListener("click",ev=>{
     document.querySelectorAll(".screen").forEach(x=>x.classList.toggle("on",x.id==="s-"+b.dataset.s));window.scrollTo(0,0);return}
   if(b.id==="logBtn")return openLog(b.dataset.topic);
   if(b.dataset.topic&&b.classList.contains("topic"))return openLog(b.dataset.topic);
-  if(b.id==="examPill")return openExams();
+  if(b.id==="shX")return closeSheet();
+  if(b.id==="shBack")return sheetBack();
+  if(b.id==="examPill")return nav(openExams);
   if(b.dataset.exam){S.exam=b.dataset.exam;save();closeSheet();renderAll();return}
   if(b.dataset.chip){document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===b));$("#sheet").dataset.topic=b.dataset.chip;return}
   if(b.id==="saveLog"){
@@ -857,18 +895,18 @@ document.addEventListener("click",ev=>{
   if(b.id==="paceBtn")return openPace();
   if(b.id==="saveDate"){const v=$("#examDate").value;if(!v){toast("Pick a date");return}S.dates=S.dates||{};S.dates[S.exam]=v;topUpPlan();save();closeSheet();renderAll();toast("Plan paced to your exam");return}
   if(b.id==="clearDate"){delete S.dates[S.exam];save();closeSheet();renderAll();return}
-  if(b.dataset.viva)return startViva(b.dataset.viva);
+  if(b.dataset.viva){const k=b.dataset.viva;return nav(()=>startViva(k))}
   if(b.dataset.vr)return rateV(b.dataset.vr);
   if(b.id==="vagain")return startViva(b.dataset.vk);
-  if(b.id==="panelsBtn")return openPanels();
+  if(b.id==="panelsBtn")return nav(openPanels);
   if(b.id==="installBtn"){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.finally(()=>{deferredInstall=null;renderInstall()})}return}
   if(b.dataset.qlevel){S.qlevel=b.dataset.qlevel;save();renderToday();openQuiz();return}
-  if(b.id==="tQuiz")return openQuiz();
-  if(b.id==="tViva")return openViva();
-  if(b.id==="tGuide")return openGuide();
-  if(b.id==="examPill2")return openExams();
+  if(b.id==="tQuiz")return nav(openQuiz);
+  if(b.id==="tViva")return nav(openViva);
+  if(b.id==="tGuide")return nav(openGuide);
+  if(b.id==="examPill2")return nav(openExams);
   if(b.id==="startBtn"&&!b.dataset.plan)return openLog(nextTopic(S.exam)[0]);
-  if(b.dataset.quiz)return startQuiz(b.dataset.quiz);
+  if(b.dataset.quiz){const k=b.dataset.quiz;return nav(()=>startQuiz(k))}
   if(b.dataset.opt!=null&&b.classList.contains("qopt"))return answer(+b.dataset.opt);
   if(b.id==="qnext"){if(Q.at<Q.items.length-1){Q.at++;showQ()}else finishQuiz();return}
   if(b.id==="qdone"){closeSheet();return}
