@@ -690,7 +690,7 @@ function topUpPlan(){
   while(S.plan.learn.length<want&&fresh.length)S.plan.learn.push(fresh.shift());
 }
 function openPace(){
-  const cur=(S.dates||{})[S.exam]||"",min=new Date(Date.now()+DAY).toISOString().slice(0,10);
+  const cur=(S.dates||{})[S.exam]||"",min=(function(){var t=new Date(Date.now()+DAY);return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")})();
   openSheet(`<div class="label">${esc(EXAM[S.exam].name)}</div><div class="next" style="margin-bottom:14px">When is your exam?</div>
    <input type="date" id="examDate" min="${min}" value="${esc(cur)}" class="dateinp">
    <button class="main" id="saveDate" style="margin:0 0 8px">Save</button>
@@ -956,5 +956,5 @@ function openingAnimation(){
 load();renderAll();openingAnimation();
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
-</body>
+<script src="hardening.js"></script></body>
 </html>
